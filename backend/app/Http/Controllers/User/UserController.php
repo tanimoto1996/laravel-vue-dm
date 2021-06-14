@@ -4,9 +4,11 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Message;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -18,6 +20,9 @@ class UserController extends Controller
     }
 
     public function privateMessage(Request $request, Room $room) {
+        $user_send_id = $request->user_send_id;
+        $user_Receive_id = $request->user_Receive_id;
+
         $rooms = Room::all();
         $roomsUserId = array();
         foreach ($rooms as $r) {
@@ -26,17 +31,17 @@ class UserController extends Controller
 
         // roomが登録されているかを確認する
         $is​Correct = false;
-        for ($i = 1; $i <= count($roomsUserId); $i++) {
+        foreach ($roomsUserId as $key => $val) {
             $isSendUserId = false;
             $isReceiveUserId = false;
 
-            if($roomsUserId[$i][0] == $request->user_send_id ||
-                $roomsUserId[$i][0] == $request->user_Receive_id) {
+            if($val[0] == $user_send_id ||
+                $val[1] == $user_send_id) {
                 $isSendUserId = true;
             }
 
-            if($roomsUserId[$i][1] == $request->user_send_id ||
-                $roomsUserId[$i][1] == $request->user_Receive_id) {
+            if($val[0] == $user_Receive_id ||
+                $val[1] == $user_Receive_id) {
                     $isReceiveUserId  = true;
             }
 
@@ -45,14 +50,53 @@ class UserController extends Controller
                 break;
             }
         }
-
-        // ルームがなかった場合、登録する
+        
         if(!$is​Correct) {
-            $room->user_send_id = $request->user_send_id;
-            $room->user_Receive_id = $request->user_Receive_id;
+            // ルームがなかった場合、登録する
+            $room->user_send_id = $user_send_id;
+            $room->user_Receive_id = $user_Receive_id;
             $room->save();
-        }
+            return view("users.room", ['user_send_id' => $user_send_id, 'user_Receive_id' => $user_Receive_id]);
+        } else {
 
-        return view("users.room");
+            $query =  Room::where(function($query) use($user_send_id, $user_Receive_id){
+                $query->orWhere('user_send_id', '=', $user_send_id)
+                        ->orWhere('user_send_id', '=', $user_Receive_id);
+            })->where(function($query) use($user_send_id, $user_Receive_id){
+                $query->orWhere('user_Receive_id', '=', $user_send_id)
+                        ->orWhere('user_Receive_id', '=', $user_Receive_id);
+            })->first()->toArray();
+    
+            $roomMessage = DB::table('messages')
+                        ->where('rooms_id', '=', $query['id'])
+                        ->get();
+
+            // ルームがあった場合、チャットを表示する
+            return view("users.room", ['user_send_id' => $user_send_id, 'user_Receive_id' => $user_Receive_id, 'roomMessage' => $roomMessage]);
+        }
+        
     }
+
+    public function addMessage(Request $request, Message $message, Room $room) {
+        $user_send_id = $request->user_send_id;
+        $user_Receive_id = $request->user_Receive_id;
+
+        $query =  Room::where(function($query) use($user_send_id, $user_Receive_id){
+            $query->orWhere('user_send_id', '=', $user_send_id)
+                    ->orWhere('user_send_id', '=', $user_Receive_id);
+        })->where(function($query) use($user_send_id, $user_Receive_id){
+            $query->orWhere('user_Receive_id', '=', $user_send_id)
+                    ->orWhere('user_Receive_id', '=', $user_Receive_id);
+        })->first()->toArray();
+
+        $roomMessage = DB::table('messages')
+        ->where('rooms_id', '=', $query['id'])
+        ->get();
+        $message->text = $request->text;
+        $message->user_send_id = $request->user_send_id;
+        $message->rooms_id = $query['id'];
+        $message->save();
+        return view("users.room", ['user_send_id' => $user_send_id, 'user_Receive_id' => $user_Receive_id, 'roomMessage' => $roomMessage]);
+    }
+
 }
