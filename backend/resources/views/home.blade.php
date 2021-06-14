@@ -4,19 +4,15 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">{{ __('Dashboard') }}</div>
-
-                <div class="card-body">
-                    @if (session('status'))
-                        <div class="alert alert-success" role="alert">
-                            {{ session('status') }}
-                        </div>
-                    @endif
-
-                    {{ __('You are logged in!') }}
+            @foreach ($users as $user)
+            <a href="{{ route('user.index', ['id' => $user->id]) }}">
+                <div class="card">
+                    <div class="card-body">
+                        {{ $user->name }}
+                    </div>
                 </div>
-            </div>
+            </a>
+            @endforeach
         </div>
     </div>
 </div>
