@@ -3,18 +3,22 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Message;
 use App\Models\Room;
+use App\Policies\UserPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+
     //
     public function index(Request $request) {
         $user =  Auth::user();
+        if($user->id == $request->route()->parameter('id')) {
+            return "エラーです";
+        }
         $userPage = $request->route()->parameter('id');
         return view('users.index', ["user" => $user, "page" => $userPage]);
     }
